@@ -1,0 +1,139 @@
+/* Logo styles */
+.logo-img {
+  width: 100px;
+  height: 100px;
+  padding-bottom: 10px;
+}
+
+/* Camera status container */
+.camera-status {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  padding-bottom: 0px;
+}
+
+/* Status indicator dot */
+.status-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid #1e1e1e;
+}
+
+.status-dot.active {
+  background-color: green;
+}
+
+.status-dot.inactive {
+  background-color: red;
+}
+
+/* Stats container */
+.stats-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+}
+
+/* Add button */
+.add-button {
+  border-width: 1px;
+  border-style: solid;
+  border-color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #dcfce7;
+  color: #16a34a;
+  cursor: pointer;
+  width: 50%;
+}
+
+/* Counter badge */
+.counter-badge {
+  width: 50%;
+  text-align: center;
+  border-color: #000000;
+  border-width: 1px;
+}
+
+/* Keyboard shortcuts container */
+.shortcuts-container {
+  margin: 10px;
+}
+
+/* Bottom controls */
+.bottom-controls {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+/* Image overlay container */
+.image-overlay-container {
+  position: relative;
+}
+
+/* SVG overlay image */
+.svg-overlay {
+  position: absolute;
+  z-index: 10;
+}
+
+/* Button container */
+.button-container {
+  gap: 10px;
+  padding-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Primary photo button */
+.photo-button {
+  background-color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  color: white;
+  border-radius: 24px;
+  font-weight: 500;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+/* Disabled button */
+.disabled-button {
+  background-color: #9d9d9d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  color: white;
+  border-radius: 24px;
+  font-weight: 500;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Send data button */
+.send-button {
+  background-color: #01a204;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  color: white;
+  border-radius: 24px;
+  font-weight: 500;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}

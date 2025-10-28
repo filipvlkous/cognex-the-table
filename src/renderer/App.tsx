@@ -1,50 +1,82 @@
-import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import icon from '../../assets/icon.svg';
+// App.tsx
+import { useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Home from './Screens/Home/home';
+import Settings from './Screens/settings';
+import useTcpStore from './useTcpStore';
+import { FtpConfig } from '../main/serverStore/types';
 import './App.css';
+declare global {
+  interface Window {
+    ftpAPI: {
+      startFtp: () => Promise<boolean>;
+      stopFtp: () => Promise<boolean>;
+      isFtpRunning: () => Promise<boolean>;
+      getFtpConfig: () => Promise<FtpConfig>;
+      setFtpConfig: (config: FtpConfig) => Promise<void>;
+      resetFtpConfig: () => Promise<void>;
+      selectFolder: () => Promise<any>;
+      onFtpConnected: (value: any) => Promise<void>;
+    };
+    api: {
+      connect: (
+        host: string,
+        port: number,
+      ) => Promise<{ connectionId: string; status: string }>;
+      send: (connectionId: string, msg: string) => Promise<void>;
+      disconnect: (connectionId: string) => Promise<void>;
+      onData: (
+        callback: (connectionId: string, data: string) => void,
+      ) => () => void;
+    };
+    imageAPI: {
+      getCurrentImageName: () => Promise<string>;
+      setCurrentImageName: (imageName: string) => Promise<boolean>;
+      onImageNameChanged: (callback: (imageName: string) => void) => void;
+      loadImage: (imageName: string, data?: any) => Promise<string>;
+    };
+  }
+}
 
-function Hello() {
+function App() {
+  const initializeConnections = useTcpStore(
+    (state) => state.initializeConnections,
+  );
+  const initializeDataListener = useTcpStore(
+    (state) => state.initializeDataListener,
+  );
+  const initFtpListener = useTcpStore((state) => state.initFtpListener);
+  const setBridgeReady = useTcpStore((state) => state.setBridgeReady);
+
+  useEffect(() => {
+    console.log('Checking if bridge is ready...');
+    if (window.api) {
+      setBridgeReady(true);
+      initializeConnections();
+      initFtpListener();
+      const unsubscribe = initializeDataListener();
+      return unsubscribe;
+    }
+  }, []);
+  useEffect(() => {
+    const startFtpOnLoad = async () => {
+      try {
+        const result = await window.ftpAPI.startFtp();
+        console.log('FTP Server auto-started:', result);
+      } catch (error) {
+        console.error('Failed to auto-start FTP server:', error);
+      }
+    };
+
+    startFtpOnLoad();
+  }, []);
+
   return (
-    <div>
-      <div className="Hello">
-        <img width="200" alt="icon" src={icon} />
-      </div>
-      <h1>electron-react-boilerplate</h1>
-      <div className="Hello">
-        <a
-          href="https://electron-react-boilerplate.js.org/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              📚
-            </span>
-            Read our docs
-          </button>
-        </a>
-        <a
-          href="https://github.com/sponsors/electron-react-boilerplate"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="folded hands">
-              🙏
-            </span>
-            Donate
-          </button>
-        </a>
-      </div>
-    </div>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/settings" element={<Settings />} />
+    </Routes>
   );
 }
 
-export default function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Hello />} />
-      </Routes>
-    </Router>
-  );
-}
+export default App;

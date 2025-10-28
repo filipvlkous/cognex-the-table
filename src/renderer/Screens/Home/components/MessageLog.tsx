@@ -9,17 +9,7 @@ import {
   Flag,
 } from 'lucide-react';
 import './MessageLog.css';
-import useTcpStore from '../../../useTcpStore';
-
-interface Message {
-  id: string;
-  connectionId: string;
-  type: string;
-  content: string[];
-  timestamp: string;
-  regime: number | null;
-  imageName: string | null;
-}
+import useTcpStore, { Message } from '../../../useTcpStore';
 
 interface MessageLogProps {
   messages: Message[];
@@ -127,29 +117,13 @@ export default function EnhancedMessageLog({
                         </span>
                       </td>
                       <td>
-                        {msg.type.toLowerCase() === 'json' ? (
-                          <code className="content-code">
-                            {formatContent(msg.content).slice(0, 60)}
-                            {formatContent(msg.content).length > 60
-                              ? '...'
-                              : ''}
-                          </code>
-                        ) : msg.type.toLowerCase() === 'image' &&
-                          msg.imageName ? (
-                          <div className="content-wrapper">
-                            <span className="image-name">{msg.imageName}</span>
-                            <span className="content-badge">
-                              {msg.content.length}{' '}
-                              {msg.content.length === 1 ? 'item' : 'items'}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="content-wrapper">
-                            <span className="content-text">
-                              {formatContent(msg.content)}
-                            </span>
-                          </div>
-                        )}
+                        <div className="content-wrapper">
+                          <span className="image-name">{msg.imageName}</span>
+                          <span className="content-badge">
+                            {msg.content.length}{' '}
+                            {msg.content.length === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
                       </td>
                       <td>
                         <span className="regime-value">

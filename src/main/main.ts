@@ -37,6 +37,9 @@ import { hostService } from './serverStore/services/hostService';
 import { regimeService } from './serverStore';
 import { safeParseJSON } from './utils/jsonParser';
 import { processSvgAndReturnBase64 } from './utils/jsonFilter';
+import { uploadLog } from './API/supabaseAPI';
+import { processBarcodesAlensa } from './API/wmsAPI';
+import { Message } from '../renderer/useTcpStore';
 
 log.transports.file.resolvePathFn = () =>
   path.join(app.getPath('userData'), 'logs/main.log');
@@ -904,6 +907,28 @@ ipcMain.handle('get-image-data', async (event, imageName, data?) => {
     return null;
   }
 });
+
+ipcMain.handle(
+  'send-data-to-APIs',
+  async (_event, { message }: { message: Message }) => {
+    try {
+      const barcodes = message.content.map((item) => item.content);
+      const alensaResult = await processBarcodesAlensa(barcodes);
+
+      const supabaseResult = await uploadLog(message);
+
+      return {
+        alensa: alensaResult,
+        supabase: supabaseResult,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unexpected error',
+      };
+    }
+  },
+);
 
 // Handler to set current image name
 ipcMain.handle(

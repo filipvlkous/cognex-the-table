@@ -3,9 +3,10 @@ import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './Screens/Home/home';
 import Settings from './Screens/settings';
-import useTcpStore from './useTcpStore';
+import useTcpStore, { Message } from './useTcpStore';
 import { FtpConfig } from '../main/serverStore/types';
 import './App.css';
+import { Bounce, ToastContainer } from 'react-toastify';
 declare global {
   interface Window {
     ftpAPI: {
@@ -18,7 +19,7 @@ declare global {
       selectFolder: () => Promise<any>;
       onFtpConnected: (value: any) => Promise<void>;
     };
-    api: {
+    tcpIp: {
       connect: (
         host: string,
         port: number,
@@ -30,10 +31,15 @@ declare global {
       ) => () => void;
     };
     imageAPI: {
-      getCurrentImageName: () => Promise<string>;
-      setCurrentImageName: (imageName: string) => Promise<boolean>;
-      onImageNameChanged: (callback: (imageName: string) => void) => void;
       loadImage: (imageName: string, data?: any) => Promise<string>;
+    };
+    APIs: {
+      sendDataToApis: (
+        message: Message,
+      ) => Promise<{
+        alensa: { success: boolean; error: null | string };
+        supabase: { success: boolean; error: null | string };
+      }>;
     };
   }
 }
@@ -50,7 +56,7 @@ function App() {
 
   useEffect(() => {
     console.log('Checking if bridge is ready...');
-    if (window.api) {
+    if (window.tcpIp) {
       setBridgeReady(true);
       initializeConnections();
       initFtpListener();

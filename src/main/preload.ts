@@ -1,58 +1,8 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import { FtpConfig } from './serverStore';
+import { Message } from '../renderer/useTcpStore';
 
 export type Channels = 'ipc-example';
-
-interface ImageMethods {
-  getCurrentImageName: () => Promise<string>;
-  setCurrentImageName: (imageName: string) => Promise<boolean>;
-  onImageNameChanged: (callback: (imageName: string) => void) => void;
-  loadImage: (imageName: string, data?: any) => Promise<string>;
-}
-
-const additionalHostStoreMethods: ImageMethods = {
-  loadImage: (imageName, data) =>
-    ipcRenderer.invoke('get-image-data', imageName, data),
-
-  // Method to get the current image name
-  getCurrentImageName: async (): Promise<string> => {
-    try {
-      const imageName: string = await ipcRenderer.invoke(
-        'get-current-image-name',
-      );
-      return imageName;
-    } catch (error) {
-      console.error('Error getting current image name:', error);
-      return 'test.jpg'; // fallback
-    }
-  },
-
-  // Method to set/update the current image name
-  setCurrentImageName: async (imageName: string): Promise<boolean> => {
-    try {
-      const result: boolean = await ipcRenderer.invoke(
-        'set-current-image-name',
-        imageName,
-      );
-      // Notify renderer process about the change
-      window.postMessage({ type: 'image-name-changed', imageName }, '*');
-      return result;
-    } catch (error) {
-      console.error('Error setting current image name:', error);
-      throw error;
-    }
-  },
-
-  // Method to watch for image changes (if you want real-time updates)
-  onImageNameChanged: (callback: (imageName: string) => void): void => {
-    ipcRenderer.on(
-      'image-name-changed',
-      (event: IpcRendererEvent, imageName: string) => {
-        callback(imageName);
-      },
-    );
-  },
-};
 
 const electronHandler = {
   ipcRenderer: {
@@ -74,7 +24,10 @@ const electronHandler = {
   },
 };
 
-contextBridge.exposeInMainWorld('imageAPI', additionalHostStoreMethods);
+contextBridge.exposeInMainWorld('imageAPI', {
+  loadImage: (imageName: string, data: any) =>
+    ipcRenderer.invoke('get-image-data', imageName, data),
+});
 
 contextBridge.exposeInMainWorld('electron', electronHandler);
 
@@ -85,7 +38,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-file', { path, content }),
 });
 
-contextBridge.exposeInMainWorld('api', {
+contextBridge.exposeInMainWorld('APIs', {
+  sendDataToApis: (message: Message) => {
+    return ipcRenderer.invoke('send-data-to-APIs', { message });
+  },
+});
+
+contextBridge.exposeInMainWorld('tcpIp', {
   // now returns { connectionId, status }
   connect: (host: string, port: number) => {
     return ipcRenderer.invoke('tcp-connect', { host, port });

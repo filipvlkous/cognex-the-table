@@ -15,15 +15,16 @@ interface MessageLogProps {
   messages: Message[];
   messageLimit: number;
   onImageClick?: (imageName: string) => void;
+  setHistory: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function EnhancedMessageLog({
   messages = [],
   messageLimit = 10,
   onImageClick,
+  setHistory,
 }: MessageLogProps) {
   const { setImage } = useTcpStore();
-  const [history, setHistory] = useState(false);
 
   const getTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -38,12 +39,6 @@ export default function EnhancedMessageLog({
     }
   };
 
-  const formatContent = (content: string[]) => {
-    if (content.length === 0) return 'Empty';
-    if (content.length === 1) return content[0];
-    return `${content.length} items`;
-  };
-
   const formatTimestamp = (timestamp: string) => {
     try {
       return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -55,8 +50,6 @@ export default function EnhancedMessageLog({
       return timestamp;
     }
   };
-
-  console.log(messages);
 
   return (
     <>
@@ -101,11 +94,11 @@ export default function EnhancedMessageLog({
                 messages
                   .slice(-messageLimit)
                   .reverse()
-                  .map((msg) => (
+                  .map((msg, index) => (
                     <tr key={msg.id}>
                       <td>
                         <span className="timestamp">
-                          {formatTimestamp(msg.timestamp)}
+                          {formatTimestamp(msg.receivedTime)}
                         </span>
                       </td>
                       <td>
@@ -118,7 +111,6 @@ export default function EnhancedMessageLog({
                       </td>
                       <td>
                         <div className="content-wrapper">
-                          <span className="image-name">{msg.imageName}</span>
                           <span className="content-badge">
                             {msg.content.length}{' '}
                             {msg.content.length === 1 ? 'item' : 'items'}
@@ -134,7 +126,9 @@ export default function EnhancedMessageLog({
                         {msg.imageName && (
                           <button
                             onClick={() => {
-                              setHistory(true);
+                              index !== 0
+                                ? setHistory(true)
+                                : setHistory(false);
                               setImage(msg.imageName, msg.content);
                             }}
                             className="action-button"

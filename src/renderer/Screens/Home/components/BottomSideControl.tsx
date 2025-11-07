@@ -4,7 +4,9 @@ import useTcpStore from '../../../useTcpStore';
 
 export default function BottomSideControl() {
   const store = useTcpStore();
-  const isConnected = store.connections.some((c) => c.status === 'connected');
+  const isConnected = store.connections.some(
+    (c: any) => c.status === 'connected',
+  );
 
   return (
     <div className="mt-4 border-t border-gray-200">

@@ -9,6 +9,8 @@ import BottomSideControl from './components/BottomSideControl';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import JobControl from './components/JobControl';
 import StatusHeader from './components/StatusHeader';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Constants
 const KEYBOARD_SHORTCUTS = {
@@ -23,6 +25,7 @@ function Home() {
   const store = useTcpStore();
   const [regimeCol, setRegimeCol] = useState<number[]>([]);
   const [openModal, setOpenModal] = useState(false);
+  const [history, setHistory] = useState(false);
 
   const latestMessage = store.messages[store.messages.length - 1];
 
@@ -53,14 +56,56 @@ function Home() {
 
   // Action Handlers
   const handlePhotoCapture = () => {
-    console.log('handlePhotoCapture');
     store.setImage(null);
     store.sendMessage('||>trigger on\r\n');
     store.setCameraBtnDisabled(true);
   };
 
-  const handleSendData = () => {
+  const handleSendData = async () => {
+    const toastId = toast.loading('Sending data...', {
+      position: 'top-right',
+    });
+
     store.setImage(null);
+    const data = store.sendDataMessage();
+
+    if (!data) {
+      console.warn('No data to send');
+      toast.update(toastId, {
+        render: 'No data to send',
+        type: 'warning',
+        isLoading: false,
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    try {
+      const res = await window.APIs.sendDataToApis(data);
+
+      if (res.alensa.success && res.supabase.success) {
+        toast.update(toastId, {
+          render: 'Data sent successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 4000,
+        });
+      } else {
+        toast.update(toastId, {
+          render: res.alensa.error || 'Failed to send data',
+          type: 'error',
+          isLoading: false,
+          autoClose: 4000,
+        });
+      }
+    } catch (err) {
+      toast.update(toastId, {
+        render: 'An error occurred while sending data',
+        type: 'error',
+        isLoading: false,
+        autoClose: 4000,
+      });
+    }
   };
 
   const handleRegimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -238,11 +283,27 @@ function Home() {
         <ImagePanel
           handlePhotoCapture={handlePhotoCapture}
           handleSendData={handleSendData}
+          history={history}
         />
-        <MessageLog messageLimit={MESSAGE_LIMIT} messages={store.messages} />
+
+        <MessageLog
+          setHistory={setHistory}
+          messageLimit={MESSAGE_LIMIT}
+          messages={store.messages}
+        />
       </main>
 
       <ModalAdd modal={openModal} setOpenModal={setOpenModal} />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={true}
+        newestOnTop={true}
+        closeOnClick={true}
+        pauseOnHover={false}
+        theme="colored"
+        toastClassName="!rounded-2xl !shadow-lg !p-4"
+      />
     </div>
   );
 }

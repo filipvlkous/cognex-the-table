@@ -22,6 +22,7 @@ type Corners = {
 type ContentBuild = {
   content: string;
   corners?: Corners[];
+  added: boolean;
 };
 
 export interface Message {
@@ -29,9 +30,10 @@ export interface Message {
   connectionId: string;
   type: string;
   content: ContentBuild[];
-  timestamp: string;
+  receivedTime: string;
   regime: number | null;
   imageName: string | null;
+  sendTime: string | null;
 }
 
 interface NewConnectionForm {
@@ -101,7 +103,7 @@ interface TcpStore {
   disconnectAll: () => void;
 
   sendMessage: (message: string) => void;
-
+  sendDataMessage: () => Message | undefined;
   initializeConnections: () => Promise<void>;
   initializeDataListener: () => (() => void) | undefined;
   initFtpListener: () => void;
@@ -189,40 +191,6 @@ const useTcpStore = create<TcpStore>()(
       }
     },
 
-    addContend: (value: string) => {
-      set((state) => {
-        if (!Array.isArray(state.messages) || state.messages.length === 0) {
-          return {};
-        }
-
-        const updatedMessages = [...state.messages];
-        const lastIndex = updatedMessages.length - 1;
-        const lastMessage = updatedMessages[lastIndex];
-
-        // This check is now actually useful
-        if (!lastMessage) {
-          return {};
-        }
-
-        const currentContent = Array.isArray(lastMessage.content)
-          ? lastMessage.content
-          : [];
-
-        // Create a ContentBuild object from the string value
-        const newContent: ContentBuild = {
-          content: value,
-          corners: undefined,
-        };
-
-        updatedMessages[lastIndex] = {
-          ...lastMessage,
-          content: [...currentContent, newContent],
-        };
-
-        return { messages: updatedMessages };
-      });
-    },
-
     setImage: async (image, data) => {
       if (image) {
         const [imageDataUri, svgData] = await Promise.all([
@@ -273,6 +241,41 @@ const useTcpStore = create<TcpStore>()(
 
     setMessages: (messages) => set({ messages }),
 
+    addContend: (value: string) => {
+      set((state) => {
+        if (!Array.isArray(state.messages) || state.messages.length === 0) {
+          return {};
+        }
+
+        const updatedMessages = [...state.messages];
+        const lastIndex = updatedMessages.length - 1;
+        const lastMessage = updatedMessages[lastIndex];
+
+        // This check is now actually useful
+        if (!lastMessage) {
+          return {};
+        }
+
+        const currentContent = Array.isArray(lastMessage.content)
+          ? lastMessage.content
+          : [];
+
+        // Create a ContentBuild object from the string value
+        const newContent: ContentBuild = {
+          content: value,
+          corners: undefined,
+          added: true,
+        };
+
+        updatedMessages[lastIndex] = {
+          ...lastMessage,
+          content: [...currentContent, newContent],
+        };
+
+        return { messages: updatedMessages };
+      });
+    },
+
     addMessage: async (connId, type, content: any) => {
       try {
         const json = safeParseJSON(content);
@@ -288,7 +291,11 @@ const useTcpStore = create<TcpStore>()(
         }
 
         const jj = Array.isArray(json?.codes)
-          ? json.codes.map((group: any) => group)
+          ? json.codes.map((group: ContentBuild) => ({
+              content: group.content,
+              corners: group.corners,
+              added: false,
+            }))
           : [];
 
         const message: Message = {
@@ -296,9 +303,10 @@ const useTcpStore = create<TcpStore>()(
           connectionId: connId,
           type,
           content: jj,
-          timestamp: new Date().toISOString(),
+          receivedTime: new Date().toISOString(),
           imageName: imageName,
           regime: get().regime,
+          sendTime: null,
         };
 
         set((state) => {
@@ -317,6 +325,27 @@ const useTcpStore = create<TcpStore>()(
       }
     },
 
+    sendDataMessage: (): Message | undefined => {
+      const state = get(); // use get() instead of set() callback for current state
+
+      if (!Array.isArray(state.messages) || state.messages.length === 0) return;
+
+      const updatedMessages = [...state.messages];
+      const lastIndex = updatedMessages.length - 1;
+      const lastMessage = updatedMessages[lastIndex];
+
+      if (!lastMessage) return;
+
+      updatedMessages[lastIndex] = {
+        ...lastMessage,
+        sendTime: new Date().toISOString(),
+      };
+
+      set({ messages: updatedMessages });
+
+      return updatedMessages[lastIndex];
+    },
+
     setActiveConnection: async (id) => {
       if (!id) return;
       await window.selectedHost.setSelectedHost(id);
@@ -329,12 +358,12 @@ const useTcpStore = create<TcpStore>()(
       const { connections, updateConnection, addMessage } = get();
       const conn = connections.find((c) => c.id === id);
 
-      if (!conn || !window.api) return;
+      if (!conn || !window.tcpIp) return;
 
       updateConnection(id, { status: 'connecting' });
 
       try {
-        const { connectionId: remoteId, status } = await window.api.connect(
+        const { connectionId: remoteId, status } = await window.tcpIp.connect(
           conn.host,
           conn.port,
         );
@@ -359,9 +388,9 @@ const useTcpStore = create<TcpStore>()(
       const { connections, updateConnection, addMessage } = get();
       const conn = connections.find((c) => c.id === id);
 
-      if (!conn?.remoteId || !window.api) return;
+      if (!conn?.remoteId || !window.tcpIp) return;
 
-      window.api.disconnect(conn.remoteId);
+      window.tcpIp.disconnect(conn.remoteId);
       updateConnection(id, { status: 'disconnected' });
       addMessage(id, 'system', 'Disconnected by user');
     },
@@ -388,10 +417,15 @@ const useTcpStore = create<TcpStore>()(
       const { connections } = get();
 
       const conn = connections.find((c) => c.status === 'connected');
-      if (!conn || conn.status !== 'connected' || !conn.remoteId || !window.api)
+      if (
+        !conn ||
+        conn.status !== 'connected' ||
+        !conn.remoteId ||
+        !window.tcpIp
+      )
         return;
 
-      window.api.send(conn.remoteId, messageText.trim());
+      window.tcpIp.send(conn.remoteId, messageText.trim());
     },
 
     setRegime: (regime: number) => set({ regime }),
@@ -439,9 +473,9 @@ const useTcpStore = create<TcpStore>()(
     },
 
     initializeDataListener: () => {
-      if (!window.api) return;
+      if (!window.tcpIp) return;
 
-      const unsubscribe = window.api.onData((remoteId, data) => {
+      const unsubscribe = window.tcpIp.onData((remoteId, data) => {
         const local = get().connections.find((c) => c.remoteId === remoteId);
         if (!local) return;
 

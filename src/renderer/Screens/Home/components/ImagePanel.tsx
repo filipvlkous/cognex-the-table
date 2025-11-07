@@ -13,11 +13,13 @@ import useTcpStore from '../../../useTcpStore';
 type ImagePanelProps = {
   handlePhotoCapture: () => void;
   handleSendData: () => void;
+  history: boolean;
 };
 
 export default function ImagePanel({
   handlePhotoCapture,
   handleSendData,
+  history,
 }: ImagePanelProps) {
   const store = useTcpStore();
   const isConnected = store.connections.some((c) => c.status === 'connected');
@@ -124,7 +126,7 @@ export default function ImagePanel({
               Connect to camera and select job
             </button>
           )}
-          {store.image && (
+          {store.image && !history && (
             <button className="send-button" onClick={handleSendData}>
               <Send size={20} />
               Send data

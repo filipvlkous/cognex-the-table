@@ -44,6 +44,9 @@
 /* Body */
 .modal-body {
   margin-bottom: 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
 }
 
 .modal-body label {

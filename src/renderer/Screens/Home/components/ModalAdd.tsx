@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react';
+import { Plus, Type, X } from 'lucide-react';
 import React, { useState } from 'react';
 import './ModalAdd.css'; // import stylesheet
 import useTcpStore from '../../../useTcpStore';
@@ -12,6 +12,7 @@ export default function ModalAdd({
 }) {
   const { addContend } = useTcpStore();
   const [itemText, setItemText] = useState('');
+  const [inc, setInc] = useState<number | ''>(1);
 
   const closeModal = () => {
     // toggleAddModal();
@@ -20,9 +21,8 @@ export default function ModalAdd({
   };
 
   const handleAdd = () => {
-    if (itemText.trim()) {
-      addContend(itemText.trim());
-
+    if (itemText.trim() && typeof inc === 'number') {
+      addContend(itemText.trim(), inc);
       closeModal();
     }
   };
@@ -33,7 +33,7 @@ export default function ModalAdd({
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleAdd();
+      // handleAdd();
     } else if (e.key === 'Escape') {
       handleCancel();
     }
@@ -56,16 +56,98 @@ export default function ModalAdd({
 
         {/* Input Field */}
         <div className="modal-body">
-          <label htmlFor="item-input">Item Description</label>
-          <input
-            id="item-input"
-            type="text"
-            value={itemText}
-            onChange={(e) => setItemText(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder="Enter item description..."
-            autoFocus
-          />
+          <div style={{ width: '100%' }}>
+            <label htmlFor="item-input">Item Code</label>
+            <input
+              id="item-input"
+              style={{ width: '95%' }}
+              type="text"
+              value={itemText}
+              onChange={(e) => setItemText(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Enter item code..."
+              autoFocus
+            />
+          </div>
+          <div>
+            <label htmlFor="item-input">.</label>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '5px',
+                justifyContent: 'end',
+              }}
+            >
+              <button
+                style={{
+                  paddingInline: '20px',
+                  backgroundColor: '#aaaaaa',
+                  borderRadius: '5px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  if (inc == '') {
+                    setInc(1);
+                  } else {
+                    setInc(inc + 1);
+                  }
+                }}
+              >
+                +
+              </button>
+              <input
+                style={{ width: '30%' }}
+                id="item-input"
+                type="text"
+                value={inc}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (value === '') {
+                    setInc('');
+                    return;
+                  }
+
+                  const num = Number(value);
+
+                  if (isNaN(num)) return;
+
+                  if (num <= 0) {
+                    setInc(1);
+                  } else {
+                    setInc(num);
+                  }
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '') setInc(1);
+                }}
+                onKeyDown={handleKeyPress}
+                placeholder="Enter item code..."
+              />
+              <button
+                onClick={() => {
+                  if (inc === '') {
+                    setInc(1);
+                  } else {
+                    if (inc > 1) {
+                      setInc(inc - 1);
+                    }
+                  }
+                }}
+                style={{
+                  paddingInline: '20px',
+                  backgroundColor: '#aaaaaa',
+                  borderRadius: '5px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                -
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Buttons */}

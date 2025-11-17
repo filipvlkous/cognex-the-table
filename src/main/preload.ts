@@ -25,8 +25,8 @@ const electronHandler = {
 };
 
 contextBridge.exposeInMainWorld('imageAPI', {
-  loadImage: (imageName: string, data: any) =>
-    ipcRenderer.invoke('get-image-data', imageName, data),
+  loadImage: (imageName: string, tempStoreMainImg: boolean, data: any) =>
+    ipcRenderer.invoke('get-image-data', imageName, tempStoreMainImg, data),
 });
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

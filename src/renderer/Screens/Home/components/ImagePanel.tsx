@@ -14,12 +14,14 @@ type ImagePanelProps = {
   handlePhotoCapture: () => void;
   handleSendData: () => void;
   history: boolean;
+  loading: boolean;
 };
 
 export default function ImagePanel({
   handlePhotoCapture,
   handleSendData,
   history,
+  loading,
 }: ImagePanelProps) {
   const store = useTcpStore();
   const isConnected = store.connections.some((c) => c.status === 'connected');
@@ -114,19 +116,19 @@ export default function ImagePanel({
         <div className="button-container">
           {isConnected && store.regime !== null ? (
             <button
-              disabled={store.cameraBtnDisabled}
+              disabled={store.cameraBtnDisabled || loading}
               onClick={handlePhotoCapture}
               className="photo-button"
             >
               <Camera size={20} />
-              Take a Photo
+              {store.cameraBtnDisabled || loading ? 'Loading' : 'Take a Photo'}
             </button>
           ) : (
             <button className="disabled-button" disabled>
               Connect to camera and select job
             </button>
           )}
-          {store.image && !history && (
+          {store.image && history && (
             <button className="send-button" onClick={handleSendData}>
               <Send size={20} />
               Send data

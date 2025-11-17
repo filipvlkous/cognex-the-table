@@ -31,12 +31,14 @@ declare global {
       ) => () => void;
     };
     imageAPI: {
-      loadImage: (imageName: string, data?: any) => Promise<string>;
+      loadImage: (
+        imageName: string,
+        tempStoreMainImg: boolean,
+        data?: any,
+      ) => Promise<string>;
     };
     APIs: {
-      sendDataToApis: (
-        message: Message,
-      ) => Promise<{
+      sendDataToApis: (message: Message) => Promise<{
         alensa: { success: boolean; error: null | string };
         supabase: { success: boolean; error: null | string };
       }>;

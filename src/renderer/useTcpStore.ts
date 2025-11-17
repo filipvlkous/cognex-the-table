@@ -89,7 +89,11 @@ interface TcpStore {
   removeConnection: (id: string) => void;
   removeAllConnections: () => void;
 
-  setImage: (image: string | null, data?: any) => void;
+  setImage: (
+    image: string | null,
+    tempStoreMainImg: boolean,
+    data?: any,
+  ) => void;
 
   setMessages: (messages: Message[]) => void;
   addMessage: (connId: string, type: Message['type'], content: string) => void;
@@ -112,7 +116,9 @@ interface TcpStore {
 
   addRegime: (value: number) => Promise<void>;
   removeRegime: (value: number) => Promise<void>;
-  addContend: (value: string) => void;
+  addContend: (value: string, increment: number) => void;
+  updateContend: (value: boolean) => void;
+
   setCameraBtnDisabled: (value: boolean) => void;
 }
 
@@ -191,11 +197,11 @@ const useTcpStore = create<TcpStore>()(
       }
     },
 
-    setImage: async (image, data) => {
+    setImage: async (image, tempStoreMainImg, data) => {
       if (image) {
         const [imageDataUri, svgData] = await Promise.all([
-          window.imageAPI.loadImage(image + '.jpg'),
-          window.imageAPI.loadImage(image + '.svg', data),
+          window.imageAPI.loadImage(image + '.jpg', tempStoreMainImg),
+          window.imageAPI.loadImage(image + '.svg', tempStoreMainImg, data),
         ]);
 
         set({ image: imageDataUri, svgImage: svgData });
@@ -241,7 +247,7 @@ const useTcpStore = create<TcpStore>()(
 
     setMessages: (messages) => set({ messages }),
 
-    addContend: (value: string) => {
+    addContend: (value: string, inc: number) => {
       set((state) => {
         if (!Array.isArray(state.messages) || state.messages.length === 0) {
           return {};
@@ -267,9 +273,41 @@ const useTcpStore = create<TcpStore>()(
           added: true,
         };
 
+        let arr = [];
+
+        let i = 0;
+        while (i < inc) {
+          arr.push(newContent);
+          i++;
+        }
+
         updatedMessages[lastIndex] = {
           ...lastMessage,
-          content: [...currentContent, newContent],
+          content: [...currentContent, ...arr],
+        };
+
+        return { messages: updatedMessages };
+      });
+    },
+
+    updateContend: (value: boolean) => {
+      set((state) => {
+        if (!Array.isArray(state.messages) || state.messages.length === 0) {
+          return {};
+        }
+
+        const updatedMessages = [...state.messages];
+        const lastIndex = updatedMessages.length - 1;
+        const lastMessage = updatedMessages[lastIndex];
+
+        // This check is now actually useful
+        if (!lastMessage) {
+          return {};
+        }
+
+        updatedMessages[lastIndex] = {
+          ...lastMessage,
+          type: value ? 'OK' : 'NOK',
         };
 
         return { messages: updatedMessages };
@@ -286,7 +324,7 @@ const useTcpStore = create<TcpStore>()(
           imageName = json.image.name + '-' + total;
 
           setTimeout(() => {
-            get().setImage(imageName);
+            get().setImage(imageName, true);
           }, 1000);
         }
 

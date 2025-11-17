@@ -25,7 +25,8 @@ function Home() {
   const store = useTcpStore();
   const [regimeCol, setRegimeCol] = useState<number[]>([]);
   const [openModal, setOpenModal] = useState(false);
-  const [history, setHistory] = useState(false);
+  const [history, setHistory] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const latestMessage = store.messages[store.messages.length - 1];
 
@@ -56,17 +57,18 @@ function Home() {
 
   // Action Handlers
   const handlePhotoCapture = () => {
-    store.setImage(null);
+    store.setImage(null, false);
     store.sendMessage('||>trigger on\r\n');
     store.setCameraBtnDisabled(true);
   };
 
   const handleSendData = async () => {
+    setLoading(true);
     const toastId = toast.loading('Sending data...', {
       position: 'top-right',
     });
 
-    store.setImage(null);
+    store.setImage(null, false);
     const data = store.sendDataMessage();
 
     if (!data) {
@@ -77,6 +79,8 @@ function Home() {
         isLoading: false,
         autoClose: 3000,
       });
+      store.updateContend(false);
+      setLoading(false);
       return;
     }
 
@@ -90,6 +94,7 @@ function Home() {
           isLoading: false,
           autoClose: 4000,
         });
+        store.updateContend(true);
       } else {
         toast.update(toastId, {
           render: res.alensa.error || 'Failed to send data',
@@ -97,6 +102,7 @@ function Home() {
           isLoading: false,
           autoClose: 4000,
         });
+        store.updateContend(false);
       }
     } catch (err) {
       toast.update(toastId, {
@@ -105,6 +111,9 @@ function Home() {
         isLoading: false,
         autoClose: 4000,
       });
+      store.updateContend(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -284,6 +293,7 @@ function Home() {
           handlePhotoCapture={handlePhotoCapture}
           handleSendData={handleSendData}
           history={history}
+          loading={loading}
         />
 
         <MessageLog

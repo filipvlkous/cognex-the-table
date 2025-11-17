@@ -28,16 +28,13 @@ const { v4: uuidv4 } = require('uuid');
 
 import FtpSrv from 'ftp-srv';
 import { FtpConfig, HostEntry } from './serverStore/types';
-// FTP Server imports with TypeScript compatibility
-// const FtpSrv = require('ftp-srv');
-// const bunyan = require('bunyan');
 
 import { ftpConfigService } from './serverStore/services/ftpService';
 import { hostService } from './serverStore/services/hostService';
 import { regimeService } from './serverStore';
 import { safeParseJSON } from './utils/jsonParser';
 import { processSvgAndReturnBase64 } from './utils/jsonFilter';
-import { uploadLog } from './API/supabaseAPI';
+import { uploadBase64ToSupabase, uploadLog } from './API/supabaseAPI';
 import { processBarcodesAlensa } from './API/wmsAPI';
 import { Message } from '../renderer/useTcpStore';
 
@@ -99,7 +96,15 @@ class AppUpdater {
 let tcpClient: Socket | null = null;
 let tcpConnectionInfo: { host: string; port: number } | null = null;
 
-let currentImageName: string = 'test.jpg';
+let currentImage: { data: string | null; name: string | null } = {
+  data: null,
+  name: null,
+};
+let currentSvg: { data: string | null; name: string | null } = {
+  data: null,
+  name: null,
+};
+
 let mainWindow: BrowserWindow | null = null;
 let ftpServer: FtpServer | null = null;
 
@@ -849,103 +854,124 @@ ipcMain.on('remove-all-hosts', async (): Promise<void> => {
   await hostService.removeAllHosts();
 });
 
-ipcMain.handle('get-image-data', async (event, imageName, data?) => {
-  if (!imageName) {
-    return null;
-  }
-
-  if (data) {
-    tempData = data;
-  }
-
-  const config = currentFtpConfig || (await ftpConfigService.getFtpConfig());
-  const rootPath = config?.rootPath
-    ? path.resolve(config.rootPath)
-    : path.join(app.getAppPath(), 'ftp-root');
-
-  const imagePath = path.join(rootPath, imageName);
-  try {
-    if (!fs.existsSync(imagePath)) {
-      console.error(`Image not found at: ${imagePath}`);
+ipcMain.handle(
+  'get-image-data',
+  async (event, imageName, tempStoreMainImg, data?) => {
+    console.log(tempStoreMainImg);
+    if (!imageName) {
       return null;
     }
 
-    const stats = fs.statSync(imagePath);
-
-    const fileExtension = path.extname(imageName).slice(1).toLowerCase();
-
-    if (fileExtension === 'svg') {
-      const fileData = processSvgAndReturnBase64(imagePath, tempData);
-
-      tempData = null;
-      return `data:image/svg+xml;base64,${fileData}`;
+    if (data) {
+      tempData = data;
     }
 
-    // Read file as buffer
-    const fileBuffer = fs.readFileSync(imagePath);
+    const config = currentFtpConfig || (await ftpConfigService.getFtpConfig());
+    const rootPath = config?.rootPath
+      ? path.resolve(config.rootPath)
+      : path.join(app.getAppPath(), 'ftp-root');
 
-    // If file is larger than 10MB, warn about potential issues
-    if (stats.size > 10 * 1024 * 1024) {
-      console.warn(
-        `Large file detected (${(stats.size / 1024 / 1024).toFixed(2)} MB). Consider using file:// protocol instead.`,
-      );
+    const imagePath = path.join(rootPath, imageName);
+    try {
+      if (!fs.existsSync(imagePath)) {
+        console.error(`Image not found at: ${imagePath}`);
+        return null;
+      }
+
+      const stats = fs.statSync(imagePath);
+
+      const fileExtension = path.extname(imageName).slice(1).toLowerCase();
+
+      if (fileExtension === 'svg') {
+        const fileData = processSvgAndReturnBase64(imagePath, tempData);
+
+        tempData = null;
+
+        if (tempStoreMainImg) {
+          currentSvg.data = fileData;
+          currentSvg.name = imageName;
+        }
+        return `data:image/svg+xml;base64,${fileData}`;
+      }
+
+      // Read file as buffer
+      const fileBuffer = fs.readFileSync(imagePath);
+
+      // If file is larger than 10MB, warn about potential issues
+      if (stats.size > 10 * 1024 * 1024) {
+        console.warn(
+          `Large file detected (${(stats.size / 1024 / 1024).toFixed(2)} MB). Consider using file:// protocol instead.`,
+        );
+      }
+
+      const base64Data = fileBuffer.toString('base64');
+      const mimeType =
+        {
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          png: 'image/png',
+          bmp: 'image/bmp',
+          gif: 'image/gif',
+        }[fileExtension] || 'image/jpeg';
+
+      if (tempStoreMainImg) {
+        currentImage.data = base64Data;
+        currentImage.name = imageName;
+      }
+
+      return `data:${mimeType};base64,${base64Data}`;
+    } catch (error) {
+      console.error('Failed to read image file:', error);
+      return null;
     }
-
-    const base64Data = fileBuffer.toString('base64');
-    const mimeType =
-      {
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        png: 'image/png',
-        bmp: 'image/bmp',
-        gif: 'image/gif',
-      }[fileExtension] || 'image/jpeg';
-
-    return `data:${mimeType};base64,${base64Data}`;
-  } catch (error) {
-    console.error('Failed to read image file:', error);
-    return null;
-  }
-});
+  },
+);
 
 ipcMain.handle(
   'send-data-to-APIs',
   async (_event, { message }: { message: Message }) => {
     try {
-      const barcodes = message.content.map((item) => item.content);
-      const alensaResult = await processBarcodesAlensa(barcodes);
+      if (!currentImage.data || !currentSvg.data) {
+        throw new Error('Image or SVG data is missing.');
+      }
 
-      const supabaseResult = await uploadLog(message);
+      const barcodes = message.content.map((item) => item.content);
+
+      const [alensaResult, supabaseResult, imgUpload, svgUpload] =
+        await Promise.all([
+          processBarcodesAlensa(barcodes),
+          uploadLog(message),
+          uploadBase64ToSupabase(
+            currentImage.data,
+            'images',
+            currentImage.name!,
+            'image/jpg',
+          ),
+          uploadBase64ToSupabase(
+            currentSvg.data,
+            'svg',
+            currentSvg.name!,
+            'image/svg+xml',
+          ),
+        ]);
 
       return {
+        success: true,
         alensa: alensaResult,
         supabase: supabaseResult,
+        uploads: { img: imgUpload, svg: svgUpload },
       };
     } catch (error: any) {
+      console.error('API Handling Error:', error);
       return {
         success: false,
-        error: error.message || 'Unexpected error',
+        error: error.message || 'Unexpected error during API processing',
       };
+    } finally {
+      // 4. Cleanup: Always reset state to free up memory, success or fail
+      currentImage = { data: null, name: null };
+      currentSvg = { data: null, name: null };
     }
-  },
-);
-
-// Handler to set current image name
-ipcMain.handle(
-  'set-current-image-name',
-  async (event: IpcMainInvokeEvent, imageName: string): Promise<boolean> => {
-    const oldImageName: string = currentImageName;
-    currentImageName = imageName;
-
-    // Notify all renderer processes about the change
-    if (oldImageName !== imageName) {
-      // If you have a reference to your main window
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('image-name-changed', imageName);
-      }
-    }
-
-    return true;
   },
 );
 

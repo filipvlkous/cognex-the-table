@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Wifi,
   Image,
-  FileJson,
   AlertCircle,
   MessageSquare,
-  ZoomIn,
-  Flag,
+  CheckCircle,
 } from 'lucide-react';
 import './MessageLog.css';
 import useTcpStore, { Message } from '../../../useTcpStore';
@@ -28,14 +26,27 @@ export default function EnhancedMessageLog({
 
   const getTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'image':
-        return <Image size={14} />;
-      case 'json':
-        return <FileJson size={14} />;
-      case 'error':
-        return <AlertCircle size={14} />;
+      case 'ok':
+        return (
+          <>
+            <CheckCircle color="#0ea500" size={14} />
+            <span> Ok</span>
+          </>
+        );
+      case 'nok':
+        return (
+          <>
+            <AlertCircle color="#a20000" size={14} />
+            <span>Not ok</span>
+          </>
+        );
       default:
-        return <MessageSquare size={14} />;
+        return (
+          <>
+            <span>{type}</span>
+            <MessageSquare size={14} />
+          </>
+        );
     }
   };
 
@@ -106,7 +117,6 @@ export default function EnhancedMessageLog({
                           className={`type-badge ${msg.type.toLowerCase()}`}
                         >
                           {getTypeIcon(msg.type)}
-                          <span>{msg.type}</span>
                         </span>
                       </td>
                       <td>
@@ -126,10 +136,11 @@ export default function EnhancedMessageLog({
                         {msg.imageName && (
                           <button
                             onClick={() => {
-                              index !== 0
-                                ? setHistory(true)
-                                : setHistory(false);
-                              setImage(msg.imageName, msg.content);
+                              setHistory(
+                                msg.type.toLowerCase() === 'received' &&
+                                  index === 0,
+                              );
+                              setImage(msg.imageName, false, msg.content);
                             }}
                             className="action-button"
                             title="View image"

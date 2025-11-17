@@ -1,12 +1,5 @@
 import { Message } from '../../renderer/useTcpStore';
 
-const SUPABASE_URL = 'https://aouteibsooigkxdtuayu.supabase.co';
-const SUPABASE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXRlaWJzb29pZ2t4ZHR1YXl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2NzQyMjgsImV4cCI6MjA3NzI1MDIyOH0.jG7qLOe5swEBxeTltE9MJmWt0NpZ4uUZpChTwwz67ac'; // or service key
-const SUPBAASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXRlaWJzb29pZ2t4ZHR1YXl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2NzQyMjgsImV4cCI6MjA3NzI1MDIyOH0.jG7qLOe5swEBxeTltE9MJmWt0NpZ4uUZpChTwwz67ac';
-const SUPABASE_SERVICE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXRlaWJzb29pZ2t4ZHR1YXl1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTY3NDIyOCwiZXhwIjoyMDc3MjUwMjI4fQ.I8Jpz99DIfdmTN4GmQTsCvP39zESPyXheYF26aU2UV4';
 export async function uploadLog(message: Message) {
   const receivedMs = message.receivedTime
     ? Date.parse(message.receivedTime)
@@ -31,11 +24,11 @@ export async function uploadLog(message: Message) {
     },
   ];
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/logs`, {
+    const res = await fetch(`${process.env.SUPABASE_URL}/rest/v1/logs`, {
       method: 'POST',
       headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
+        apikey: `${process.env.SUPABASE_KEY}`,
+        Authorization: `Bearer ${process.env.SUPABASE_KEY}`,
         'Content-Type': 'application/json',
         Prefer: 'return=representation', // optional: returns inserted row(s)
       },
@@ -79,11 +72,11 @@ export async function uploadBase64ToSupabase(
   }
 
   const response = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/${bucketName}/${filePath}`,
+    `${process.env.SUPABASE_URL}/storage/v1/object/${bucketName}/${filePath}`,
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
         'Content-Type': contentType,
         'x-upsert': 'true',
       },

@@ -38,6 +38,9 @@ import { uploadBase64ToSupabase, uploadLog } from './API/supabaseAPI';
 import { processBarcodesAlensa } from './API/wmsAPI';
 import { Message } from '../renderer/useTcpStore';
 
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+
 log.transports.file.resolvePathFn = () =>
   path.join(app.getPath('userData'), 'logs/main.log');
 log.transports.file.level = 'info';
